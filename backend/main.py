@@ -2,8 +2,10 @@ from typing import List, Dict, Optional
 
 from fastapi.staticfiles import StaticFiles
 from fastapi import (
-    Depends, FastAPI,
+    Depends,
+    FastAPI,
     HTTPException,
+    Request,
     WebSocket,
     WebSocketDisconnect,
 )
@@ -71,22 +73,39 @@ def create_room(room: RoomCreate, db: Session = Depends(get_db)) -> models.Room:
     return crud.create_room(db, room)
 
 
-# TODO
 @app.post("/rooms/{room_name}/story/{story_id}/guess", status_code=201, response_model=Guess)
-def create_guess(room_name: str, story_id: int, guess: GuessCreate, db: Session = Depends(get_db)) -> models.Guess:
+async def create_guess(room_name: str, story_id: int, guess: GuessCreate, request:
+        Request, db: Session = Depends(get_db)) -> models.Guess:
+    # Connection Manager
+    scope = request.scope
+    connection_manager: Optional[ConnectionManager] = scope.get("connection_manager")
+    if connection_manager is None:
+        raise RuntimeError("Global `connection_manager` instance unavailable!")
+    # Room
     room = crud.get_room_by_name(db, room_name)
     if room is None:
         raise HTTPException(status_code=404, detail="Room not found")
-    return crud.create_guess(db, room, story_id, guess)
+    # Action
+    guess = crud.create_guess(db, room, story_id, guess)
+    await connection_manager.send_update(room)
+    return guess
 
 
-# TODO - connection_manager.send_update(room)
 @app.post("/rooms/{room_name}/story", status_code=201, response_model=Story)
-def create_story(room_name: str, story: StoryCreate, db: Session = Depends(get_db)) -> models.Story:
+async def create_story(room_name: str, story: StoryCreate, request: Request, db: Session = Depends(get_db)) -> models.Story:
+    # Connection Manager
+    scope = request.scope
+    connection_manager: Optional[ConnectionManager] = scope.get("connection_manager")
+    if connection_manager is None:
+        raise RuntimeError("Global `connection_manager` instance unavailable!")
+    # Room
     room = crud.get_room_by_name(db, room_name)
     if room is None:
         raise HTTPException(status_code=404, detail="Room not found")
-    return crud.create_story(db, room, story)
+    # Action
+    story = crud.create_story(db, room, story)
+    await connection_manager.send_update(room)
+    return story
 
 
 @app.post("/rooms/{room_name}/user", status_code=201, response_model=User)
