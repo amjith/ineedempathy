@@ -77,8 +77,9 @@ def test_create_user():
 
 
 def test_create_story():
+    room = create_room("singleplayer")
     response = test_client.post(
-        "/rooms/1/story",
+        f"/rooms/{room['name']}/story",
         json={
             "user_id": 1,
             "card_id": 10,
@@ -95,8 +96,9 @@ def test_create_story():
 
 
 def test_create_guess():
+    room = create_room("singleplayer")
     response = test_client.post(
-        "/rooms/1/story/1/guess",
+        f"/rooms/{room['name']}/story/1/guess",
         json={
             "user_id": 1,
             "card_id": 10

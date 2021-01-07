@@ -71,14 +71,22 @@ def create_room(room: RoomCreate, db: Session = Depends(get_db)) -> models.Room:
     return crud.create_room(db, room)
 
 
-@app.post("/rooms/{room_id}/story/{story_id}/guess", status_code=201, response_model=Guess)
-def create_guess(room_id: int, story_id: int, guess: GuessCreate, db: Session = Depends(get_db)) -> models.Guess:
-    return crud.create_guess(db, room_id, story_id, guess)
+# TODO
+@app.post("/rooms/{room_name}/story/{story_id}/guess", status_code=201, response_model=Guess)
+def create_guess(room_name: str, story_id: int, guess: GuessCreate, db: Session = Depends(get_db)) -> models.Guess:
+    room = crud.get_room_by_name(db, room_name)
+    if room is None:
+        raise HTTPException(status_code=404, detail="Room not found")
+    return crud.create_guess(db, room, story_id, guess)
 
 
-@app.post("/rooms/{room_id}/story", status_code=201, response_model=Story)
-def create_story(room_id: int, story: StoryCreate, db: Session = Depends(get_db)) -> models.Story:
-    return crud.create_story(db, room_id, story)
+# TODO - connection_manager.send_update(room)
+@app.post("/rooms/{room_name}/story", status_code=201, response_model=Story)
+def create_story(room_name: str, story: StoryCreate, db: Session = Depends(get_db)) -> models.Story:
+    room = crud.get_room_by_name(db, room_name)
+    if room is None:
+        raise HTTPException(status_code=404, detail="Room not found")
+    return crud.create_story(db, room, story)
 
 
 @app.post("/rooms/{room_name}/user", status_code=201, response_model=User)
